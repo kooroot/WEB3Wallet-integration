@@ -113,6 +113,12 @@ function App() {
 
   const { writeContract: increment, isPending: isIncrementing, data: incrementTxHash } = useWriteContract();
   const { writeContract: setNumber, isPending: isSettingNumber, data: setNumberTxHash } = useWriteContract();
+  
+  // State for tracking Dynamic and Privy wallet transactions
+  const [isDynamicIncrementing, setIsDynamicIncrementing] = useState(false);
+  const [isDynamicSettingNumber, setIsDynamicSettingNumber] = useState(false);
+  const [isPrivyIncrementing, setIsPrivyIncrementing] = useState(false);
+  const [isPrivySettingNumber, setIsPrivySettingNumber] = useState(false);
 
   // Auto-switch network for connected wallets
   useEffect(() => {
@@ -213,57 +219,67 @@ function App() {
     try {
       // For Dynamic, use their native SDK
       if (walletType === "dynamic" && primaryWallet && isEthereumWallet(primaryWallet)) {
-        // Get wallet client
-        const walletClient = await primaryWallet.getWalletClient();
-        const publicClient = await primaryWallet.getPublicClient();
-        
-        // Create transaction data
-        const data = encodeFunctionData({
-          abi: COUNTER_ABI,
-          functionName: "increment",
-        });
-        
-        // Send transaction
-        const hash = await walletClient.sendTransaction({
-          to: counterAddress as `0x${string}`,
-          data,
-          chain: selectedNetwork === 'anvil' ? anvil : sepolia,
-          account: walletClient.account,
-        });
-        
-        // Wait for transaction receipt
-        const receipt = await publicClient.waitForTransactionReceipt({ hash });
-        if (receipt.status === 'success') {
-          refetchNumber();
+        setIsDynamicIncrementing(true);
+        try {
+          // Get wallet client
+          const walletClient = await primaryWallet.getWalletClient();
+          const publicClient = await primaryWallet.getPublicClient();
+          
+          // Create transaction data
+          const data = encodeFunctionData({
+            abi: COUNTER_ABI,
+            functionName: "increment",
+          });
+          
+          // Send transaction
+          const hash = await walletClient.sendTransaction({
+            to: counterAddress as `0x${string}`,
+            data,
+            chain: selectedNetwork === 'anvil' ? anvil : sepolia,
+            account: walletClient.account,
+          });
+          
+          // Wait for transaction receipt
+          const receipt = await publicClient.waitForTransactionReceipt({ hash });
+          if (receipt.status === 'success') {
+            refetchNumber();
+          }
+        } finally {
+          setIsDynamicIncrementing(false);
         }
       } else if (walletType === "privy" && privyWallets.length > 0) {
-        // For Privy, use viem with their provider
-        const wallet = privyWallets[0];
-        const provider = await wallet.getEthereumProvider();
-        
-        // Create wallet client with Privy provider
-        const walletClient = createWalletClient({
-          chain: selectedNetwork === 'anvil' ? anvil : sepolia,
-          transport: custom(provider),
-        });
-        
-        // Send transaction
-        const hash = await walletClient.writeContract({
-          address: counterAddress as `0x${string}`,
-          abi: COUNTER_ABI,
-          functionName: "increment",
-          account: wallet.address as `0x${string}`,
-        });
-        
-        // Wait for transaction receipt
-        const publicClient = createPublicClient({
-          chain: selectedNetwork === 'anvil' ? anvil : sepolia,
-          transport: http(),
-        });
-        
-        const receipt = await publicClient.waitForTransactionReceipt({ hash });
-        if (receipt.status === 'success') {
-          refetchNumber();
+        setIsPrivyIncrementing(true);
+        try {
+          // For Privy, use viem with their provider
+          const wallet = privyWallets[0];
+          const provider = await wallet.getEthereumProvider();
+          
+          // Create wallet client with Privy provider
+          const walletClient = createWalletClient({
+            chain: selectedNetwork === 'anvil' ? anvil : sepolia,
+            transport: custom(provider),
+          });
+          
+          // Send transaction
+          const hash = await walletClient.writeContract({
+            address: counterAddress as `0x${string}`,
+            abi: COUNTER_ABI,
+            functionName: "increment",
+            account: wallet.address as `0x${string}`,
+          });
+          
+          // Wait for transaction receipt
+          const publicClient = createPublicClient({
+            chain: selectedNetwork === 'anvil' ? anvil : sepolia,
+            transport: http(),
+          });
+          
+          const receipt = await publicClient.waitForTransactionReceipt({ hash });
+          if (receipt.status === 'success') {
+            refetchNumber();
+          }
+        } finally {
+          setIsPrivyIncrementing(false);
         }
       } else {
         // For other wallets (MetaMask, Wepin), use wagmi
@@ -285,61 +301,71 @@ function App() {
     try {
       // For Dynamic, use their native SDK
       if (walletType === "dynamic" && primaryWallet && isEthereumWallet(primaryWallet)) {
-        // Get wallet client
-        const walletClient = await primaryWallet.getWalletClient();
-        const publicClient = await primaryWallet.getPublicClient();
-        
-        // Create transaction data
-        const data = encodeFunctionData({
-          abi: COUNTER_ABI,
-          functionName: "setNumber",
-          args: [BigInt(inputNumber)],
-        });
-        
-        // Send transaction
-        const hash = await walletClient.sendTransaction({
-          to: counterAddress as `0x${string}`,
-          data,
-          chain: selectedNetwork === 'anvil' ? anvil : sepolia,
-          account: walletClient.account,
-        });
-        
-        // Wait for transaction receipt
-        const receipt = await publicClient.waitForTransactionReceipt({ hash });
-        if (receipt.status === 'success') {
-          setInputNumber("");
-          refetchNumber();
+        setIsDynamicSettingNumber(true);
+        try {
+          // Get wallet client
+          const walletClient = await primaryWallet.getWalletClient();
+          const publicClient = await primaryWallet.getPublicClient();
+          
+          // Create transaction data
+          const data = encodeFunctionData({
+            abi: COUNTER_ABI,
+            functionName: "setNumber",
+            args: [BigInt(inputNumber)],
+          });
+          
+          // Send transaction
+          const hash = await walletClient.sendTransaction({
+            to: counterAddress as `0x${string}`,
+            data,
+            chain: selectedNetwork === 'anvil' ? anvil : sepolia,
+            account: walletClient.account,
+          });
+          
+          // Wait for transaction receipt
+          const receipt = await publicClient.waitForTransactionReceipt({ hash });
+          if (receipt.status === 'success') {
+            setInputNumber("");
+            refetchNumber();
+          }
+        } finally {
+          setIsDynamicSettingNumber(false);
         }
       } else if (walletType === "privy" && privyWallets.length > 0) {
-        // For Privy, use viem with their provider
-        const wallet = privyWallets[0];
-        const provider = await wallet.getEthereumProvider();
-        
-        // Create wallet client with Privy provider
-        const walletClient = createWalletClient({
-          chain: selectedNetwork === 'anvil' ? anvil : sepolia,
-          transport: custom(provider),
-        });
-        
-        // Send transaction
-        const hash = await walletClient.writeContract({
-          address: counterAddress as `0x${string}`,
-          abi: COUNTER_ABI,
-          functionName: "setNumber",
-          args: [BigInt(inputNumber)],
-          account: wallet.address as `0x${string}`,
-        });
-        
-        // Wait for transaction receipt
-        const publicClient = createPublicClient({
-          chain: selectedNetwork === 'anvil' ? anvil : sepolia,
-          transport: http(),
-        });
-        
-        const receipt = await publicClient.waitForTransactionReceipt({ hash });
-        if (receipt.status === 'success') {
-          setInputNumber("");
-          refetchNumber();
+        setIsPrivySettingNumber(true);
+        try {
+          // For Privy, use viem with their provider
+          const wallet = privyWallets[0];
+          const provider = await wallet.getEthereumProvider();
+          
+          // Create wallet client with Privy provider
+          const walletClient = createWalletClient({
+            chain: selectedNetwork === 'anvil' ? anvil : sepolia,
+            transport: custom(provider),
+          });
+          
+          // Send transaction
+          const hash = await walletClient.writeContract({
+            address: counterAddress as `0x${string}`,
+            abi: COUNTER_ABI,
+            functionName: "setNumber",
+            args: [BigInt(inputNumber)],
+            account: wallet.address as `0x${string}`,
+          });
+          
+          // Wait for transaction receipt
+          const publicClient = createPublicClient({
+            chain: selectedNetwork === 'anvil' ? anvil : sepolia,
+            transport: http(),
+          });
+          
+          const receipt = await publicClient.waitForTransactionReceipt({ hash });
+          if (receipt.status === 'success') {
+            setInputNumber("");
+            refetchNumber();
+          }
+        } finally {
+          setIsPrivySettingNumber(false);
         }
       } else {
         // For other wallets (MetaMask, Wepin), use wagmi
@@ -591,18 +617,18 @@ function App() {
             <button
               type="button"
               onClick={handleIncrement}
-              disabled={isIncrementing || isIncrementConfirming}
+              disabled={isIncrementing || isIncrementConfirming || isDynamicIncrementing || isPrivyIncrementing}
               style={{
                 padding: "10px 20px",
                 backgroundColor: "#28a745",
                 color: "white",
                 border: "none",
                 borderRadius: "4px",
-                cursor: isIncrementing || isIncrementConfirming ? "not-allowed" : "pointer",
-                opacity: isIncrementing || isIncrementConfirming ? 0.7 : 1,
+                cursor: isIncrementing || isIncrementConfirming || isDynamicIncrementing || isPrivyIncrementing ? "not-allowed" : "pointer",
+                opacity: isIncrementing || isIncrementConfirming || isDynamicIncrementing || isPrivyIncrementing ? 0.7 : 1,
               }}
             >
-              {isIncrementing ? "Sending..." : isIncrementConfirming ? "Confirming..." : "Increment"}
+              {(isIncrementing || isDynamicIncrementing || isPrivyIncrementing) ? "Sending..." : isIncrementConfirming ? "Confirming..." : "Increment"}
             </button>
           </div>
 
@@ -617,18 +643,18 @@ function App() {
             <button
               type="button"
               onClick={handleSetNumber}
-              disabled={isSettingNumber || isSetNumberConfirming || !inputNumber}
+              disabled={isSettingNumber || isSetNumberConfirming || isDynamicSettingNumber || isPrivySettingNumber || !inputNumber}
               style={{
                 padding: "8px 16px",
                 backgroundColor: "#007bff",
                 color: "white",
                 border: "none",
                 borderRadius: "4px",
-                cursor: isSettingNumber || isSetNumberConfirming || !inputNumber ? "not-allowed" : "pointer",
-                opacity: isSettingNumber || isSetNumberConfirming || !inputNumber ? 0.7 : 1,
+                cursor: isSettingNumber || isSetNumberConfirming || isDynamicSettingNumber || isPrivySettingNumber || !inputNumber ? "not-allowed" : "pointer",
+                opacity: isSettingNumber || isSetNumberConfirming || isDynamicSettingNumber || isPrivySettingNumber || !inputNumber ? 0.7 : 1,
               }}
             >
-              {isSettingNumber ? "Sending..." : isSetNumberConfirming ? "Confirming..." : "Set Number"}
+              {(isSettingNumber || isDynamicSettingNumber || isPrivySettingNumber) ? "Sending..." : isSetNumberConfirming ? "Confirming..." : "Set Number"}
             </button>
           </div>
         </div>
